@@ -1,0 +1,3 @@
+User-Agent: *
+Allow: /
+Sitemap: https://news.ekani.net/sitemap.xml

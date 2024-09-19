@@ -1,0 +1,20 @@
+{
+  "extends": "next/core-web-vitals",
+  "plugins": ["eslint-plugin-react-compiler"],
+  "rules": {
+    "react-compiler/react-compiler": "error",
+    "no-restricted-imports": ["error", { 
+      "paths": [
+        {
+          "name": "next/navigation",
+          "importNames": ["usePathname", "useRouter", "useParams", "useSearchParams"],
+          "message": "Please import hook from '~/common/models/hooks' instead."
+        },
+        {
+          "name": "next/link",
+          "message": "Please import 'Link' from '~/common/components/links' instead."
+        }
+      ]
+    }]
+  }
+}
