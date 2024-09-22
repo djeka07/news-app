@@ -6,6 +6,6 @@ export const root = style({
 });
 
 export const buttonWrapper = style({
-  display: 'grid',
-  gridTemplateColumns: 'auto auto',
+  display: 'flex',
+  gap: 8,
 });

@@ -38,389 +38,430 @@ export class AccessTokenAuthClient {
 }
 
 export class UserControllerClient extends AccessTokenAuthClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+  private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+  private baseUrl: string;
+  protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
-    constructor(configuration: AuthClient, baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        super(configuration);
-        this.http = http ? http : <any>window;
-        this.baseUrl = this.getBaseUrl("", baseUrl);
+  constructor(
+    configuration: AuthClient,
+    baseUrl?: string,
+    http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> },
+  ) {
+    super(configuration);
+    this.http = http ? http : <any>window;
+    this.baseUrl = this.getBaseUrl('', baseUrl);
+  }
+
+  getUser(): Promise<UserResponse> {
+    let url_ = this.baseUrl + '/api/v1/users';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_ = <RequestInit>{
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processGetUser(_response);
+      });
+  }
+
+  protected processGetUser(response: Response): Promise<UserResponse> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    getUser(): Promise<UserResponse> {
-        let url_ = this.baseUrl + "/api/v1/users";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ = <RequestInit>{
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processGetUser(_response);
-        });
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 = _responseText === '' ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
+    return Promise.resolve<UserResponse>(<any>null);
+  }
 
-    protected processGetUser(response: Response): Promise<UserResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserResponse>(<any>null);
+  createOrUpdateUser(body: CreateOrUpdateUserRequest): Promise<void> {
+    let url_ = this.baseUrl + '/api/v1/users';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_ = <RequestInit>{
+      body: content_,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processCreateOrUpdateUser(_response);
+      });
+  }
+
+  protected processCreateOrUpdateUser(response: Response): Promise<void> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    createOrUpdateUser(body: CreateOrUpdateUserRequest): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/users";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ = <RequestInit>{
-            body: content_,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processCreateOrUpdateUser(_response);
-        });
+    if (status === 400) {
+      return response.text().then((_responseText) => {
+        return throwException('A server side error occurred.', status, _responseText, _headers);
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
+    return Promise.resolve<void>(<any>null);
+  }
 
-    protected processCreateOrUpdateUser(response: Response): Promise<void> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 400) {
-            return response.text().then((_responseText) => {
-            return throwException("A server side error occurred.", status, _responseText, _headers);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<void>(<any>null);
+  getUserReadList(): Promise<NewsArticleResponse[]> {
+    let url_ = this.baseUrl + '/api/v1/users/readings';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_ = <RequestInit>{
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processGetUserReadList(_response);
+      });
+  }
+
+  protected processGetUserReadList(response: Response): Promise<NewsArticleResponse[]> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    getUserReadList(): Promise<NewsArticleResponse[]> {
-        let url_ = this.baseUrl + "/api/v1/users/readings";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ = <RequestInit>{
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processGetUserReadList(_response);
-        });
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 =
+          _responseText === '' ? null : <NewsArticleResponse[]>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
+    return Promise.resolve<NewsArticleResponse[]>(<any>null);
+  }
 
-    protected processGetUserReadList(response: Response): Promise<NewsArticleResponse[]> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <NewsArticleResponse[]>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<NewsArticleResponse[]>(<any>null);
+  addToUserReadingList(url: string, body: ArticleRequest): Promise<UserResponse> {
+    let url_ = this.baseUrl + '/api/v1/users/readings/{url}';
+    if (url === undefined || url === null) throw new Error("The parameter 'url' must be defined.");
+    url_ = url_.replace('{url}', encodeURIComponent('' + url));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_ = <RequestInit>{
+      body: content_,
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processAddToUserReadingList(_response);
+      });
+  }
+
+  protected processAddToUserReadingList(response: Response): Promise<UserResponse> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    addToUserReadingList(url: string, body: ArticleRequest): Promise<UserResponse> {
-        let url_ = this.baseUrl + "/api/v1/users/readings/{url}";
-        if (url === undefined || url === null)
-            throw new Error("The parameter 'url' must be defined.");
-        url_ = url_.replace("{url}", encodeURIComponent("" + url));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ = <RequestInit>{
-            body: content_,
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processAddToUserReadingList(_response);
-        });
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 = _responseText === '' ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
+    return Promise.resolve<UserResponse>(<any>null);
+  }
 
-    protected processAddToUserReadingList(response: Response): Promise<UserResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserResponse>(<any>null);
+  removeFromUserReadingList(url: string): Promise<UserResponse> {
+    let url_ = this.baseUrl + '/api/v1/users/readings/{url}';
+    if (url === undefined || url === null) throw new Error("The parameter 'url' must be defined.");
+    url_ = url_.replace('{url}', encodeURIComponent('' + url));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_ = <RequestInit>{
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processRemoveFromUserReadingList(_response);
+      });
+  }
+
+  protected processRemoveFromUserReadingList(response: Response): Promise<UserResponse> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    removeFromUserReadingList(url: string): Promise<UserResponse> {
-        let url_ = this.baseUrl + "/api/v1/users/readings/{url}";
-        if (url === undefined || url === null)
-            throw new Error("The parameter 'url' must be defined.");
-        url_ = url_.replace("{url}", encodeURIComponent("" + url));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ = <RequestInit>{
-            method: "DELETE",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processRemoveFromUserReadingList(_response);
-        });
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 = _responseText === '' ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
-
-    protected processRemoveFromUserReadingList(response: Response): Promise<UserResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <UserResponse>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserResponse>(<any>null);
-    }
+    return Promise.resolve<UserResponse>(<any>null);
+  }
 }
 
 export class NewsControllerClient extends AccessTokenAuthClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+  private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+  private baseUrl: string;
+  protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
-    constructor(configuration: AuthClient, baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        super(configuration);
-        this.http = http ? http : <any>window;
-        this.baseUrl = this.getBaseUrl("", baseUrl);
+  constructor(
+    configuration: AuthClient,
+    baseUrl?: string,
+    http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> },
+  ) {
+    super(configuration);
+    this.http = http ? http : <any>window;
+    this.baseUrl = this.getBaseUrl('', baseUrl);
+  }
+
+  get(
+    language: string,
+    sortBy: string,
+    q?: string | undefined,
+    page?: number | undefined,
+    take?: number | undefined,
+  ): Promise<NewsResponse> {
+    let url_ = this.baseUrl + '/api/v1/news?';
+    if (language === undefined || language === null)
+      throw new Error("The parameter 'language' must be defined and cannot be null.");
+    else url_ += 'language=' + encodeURIComponent('' + language) + '&';
+    if (sortBy === undefined || sortBy === null)
+      throw new Error("The parameter 'sortBy' must be defined and cannot be null.");
+    else url_ += 'sortBy=' + encodeURIComponent('' + sortBy) + '&';
+    if (q === null) throw new Error("The parameter 'q' cannot be null.");
+    else if (q !== undefined) url_ += 'q=' + encodeURIComponent('' + q) + '&';
+    if (page === null) throw new Error("The parameter 'page' cannot be null.");
+    else if (page !== undefined) url_ += 'page=' + encodeURIComponent('' + page) + '&';
+    if (take === null) throw new Error("The parameter 'take' cannot be null.");
+    else if (take !== undefined) url_ += 'take=' + encodeURIComponent('' + take) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_ = <RequestInit>{
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processGet(_response);
+      });
+  }
+
+  protected processGet(response: Response): Promise<NewsResponse> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    get(language: string, sortBy: string, q?: string | undefined, page?: number | undefined, take?: number | undefined): Promise<NewsResponse> {
-        let url_ = this.baseUrl + "/api/v1/news?";
-        if (language === undefined || language === null)
-            throw new Error("The parameter 'language' must be defined and cannot be null.");
-        else
-            url_ += "language=" + encodeURIComponent("" + language) + "&";
-        if (sortBy === undefined || sortBy === null)
-            throw new Error("The parameter 'sortBy' must be defined and cannot be null.");
-        else
-            url_ += "sortBy=" + encodeURIComponent("" + sortBy) + "&";
-        if (q === null)
-            throw new Error("The parameter 'q' cannot be null.");
-        else if (q !== undefined)
-            url_ += "q=" + encodeURIComponent("" + q) + "&";
-        if (page === null)
-            throw new Error("The parameter 'page' cannot be null.");
-        else if (page !== undefined)
-            url_ += "page=" + encodeURIComponent("" + page) + "&";
-        if (take === null)
-            throw new Error("The parameter 'take' cannot be null.");
-        else if (take !== undefined)
-            url_ += "take=" + encodeURIComponent("" + take) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ = <RequestInit>{
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processGet(_response);
-        });
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 = _responseText === '' ? null : <NewsResponse>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
+    return Promise.resolve<NewsResponse>(<any>null);
+  }
 
-    protected processGet(response: Response): Promise<NewsResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <NewsResponse>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<NewsResponse>(<any>null);
+  getTopHeadlines(
+    country: string,
+    page?: number | undefined,
+    take?: number | undefined,
+    category?: string | undefined,
+    q?: string | undefined,
+  ): Promise<NewsResponse> {
+    let url_ = this.baseUrl + '/api/v1/news/tops?';
+    if (country === undefined || country === null)
+      throw new Error("The parameter 'country' must be defined and cannot be null.");
+    else url_ += 'country=' + encodeURIComponent('' + country) + '&';
+    if (page === null) throw new Error("The parameter 'page' cannot be null.");
+    else if (page !== undefined) url_ += 'page=' + encodeURIComponent('' + page) + '&';
+    if (take === null) throw new Error("The parameter 'take' cannot be null.");
+    else if (take !== undefined) url_ += 'take=' + encodeURIComponent('' + take) + '&';
+    if (category === null) throw new Error("The parameter 'category' cannot be null.");
+    else if (category !== undefined) url_ += 'category=' + encodeURIComponent('' + category) + '&';
+    if (q === null) throw new Error("The parameter 'q' cannot be null.");
+    else if (q !== undefined) url_ += 'q=' + encodeURIComponent('' + q) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_ = <RequestInit>{
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    return this.transformOptions(options_)
+      .then((transformedOptions_) => {
+        return this.http.fetch(url_, transformedOptions_);
+      })
+      .then((_response: Response) => {
+        return this.processGetTopHeadlines(_response);
+      });
+  }
+
+  protected processGetTopHeadlines(response: Response): Promise<NewsResponse> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && response.headers.forEach) {
+      response.headers.forEach((v: any, k: any) => (_headers[k] = v));
     }
-
-    getTopHeadlines(country: string, page?: number | undefined, take?: number | undefined, category?: string | undefined, q?: string | undefined): Promise<NewsResponse> {
-        let url_ = this.baseUrl + "/api/v1/news/tops?";
-        if (country === undefined || country === null)
-            throw new Error("The parameter 'country' must be defined and cannot be null.");
-        else
-            url_ += "country=" + encodeURIComponent("" + country) + "&";
-        if (page === null)
-            throw new Error("The parameter 'page' cannot be null.");
-        else if (page !== undefined)
-            url_ += "page=" + encodeURIComponent("" + page) + "&";
-        if (take === null)
-            throw new Error("The parameter 'take' cannot be null.");
-        else if (take !== undefined)
-            url_ += "take=" + encodeURIComponent("" + take) + "&";
-        if (category === null)
-            throw new Error("The parameter 'category' cannot be null.");
-        else if (category !== undefined)
-            url_ += "category=" + encodeURIComponent("" + category) + "&";
-        if (q === null)
-            throw new Error("The parameter 'q' cannot be null.");
-        else if (q !== undefined)
-            url_ += "q=" + encodeURIComponent("" + q) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ = <RequestInit>{
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.transformOptions(options_).then(transformedOptions_ => {
-            return this.http.fetch(url_, transformedOptions_);
-        }).then((_response: Response) => {
-            return this.processGetTopHeadlines(_response);
-        });
+    console.log('response', response);
+    if (status === 200) {
+      return response.text().then((_responseText) => {
+        let result200: any = null;
+        result200 = _responseText === '' ? null : <NewsResponse>JSON.parse(_responseText, this.jsonParseReviver);
+        return result200;
+      });
+    } else if (status !== 200 && status !== 204) {
+      return response.text().then((_responseText) => {
+        return throwException('An unexpected server error occurred.', status, _responseText, _headers);
+      });
     }
-
-    protected processGetTopHeadlines(response: Response): Promise<NewsResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : <NewsResponse>JSON.parse(_responseText, this.jsonParseReviver);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<NewsResponse>(<any>null);
-    }
+    return Promise.resolve<NewsResponse>(<any>null);
+  }
 }
 
 export interface UserResponse {
-    apiKey: string;
-    email: string;
-    language: string;
-    readingList: any[][];
+  apiKey: string;
+  email: string;
+  language: string;
+  readingList: any[][];
 }
 
 export interface CreateOrUpdateUserRequest {
-    apiKey: string;
-    language: string;
+  apiKey: string;
+  language: string;
 }
 
 export interface NewsSourceResponse {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 export interface NewsArticleResponse {
-    source: NewsSourceResponse;
-    author: string;
-    title: string;
-    description: any;
-    url: string;
-    urlToImage?: any;
-    published: string;
-    isInReadingList: boolean;
-    isAvailable: boolean;
+  source: NewsSourceResponse;
+  author: string;
+  title: string;
+  description: any;
+  url: string;
+  urlToImage?: any;
+  published: string;
+  isInReadingList: boolean;
+  isAvailable: boolean;
 }
 
-export interface ArticleRequest {
-}
+export interface ArticleRequest {}
 
 export interface NewsResponse {
-    total: number;
-    items: NewsArticleResponse[];
+  total: number;
+  items: NewsArticleResponse[];
 }
 
 export class ApiException extends Error {
-    message: string;
-    status: number;
-    response: string;
-    headers: { [key: string]: any; };
-    result: any;
+  message: string;
+  status: number;
+  response: string;
+  headers: { [key: string]: any };
+  result: any;
 
-    constructor(message: string, status: number, response: string, headers: { [key: string]: any; }, result: any) {
-        super();
+  constructor(message: string, status: number, response: string, headers: { [key: string]: any }, result: any) {
+    super();
 
-        this.message = message;
-        this.status = status;
-        this.response = response;
-        this.headers = headers;
-        this.result = result;
-    }
+    this.message = message;
+    this.status = status;
+    this.response = response;
+    this.headers = headers;
+    this.result = result;
+  }
 
-    protected isApiException = true;
+  protected isApiException = true;
 
-    static isApiException(obj: any): obj is ApiException {
-        return obj.isApiException === true;
-    }
+  static isApiException(obj: any): obj is ApiException {
+    return obj.isApiException === true;
+  }
 }
 
-function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {
-    if (result !== null && result !== undefined)
-        throw result;
-    else
-        throw new ApiException(message, status, response, headers, null);
+function throwException(
+  message: string,
+  status: number,
+  response: string,
+  headers: { [key: string]: any },
+  result?: any,
+): any {
+  if (result !== null && result !== undefined) throw result;
+  else throw new ApiException(message, status, response, headers, null);
 }

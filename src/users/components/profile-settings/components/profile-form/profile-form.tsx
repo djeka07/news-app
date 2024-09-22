@@ -37,7 +37,7 @@ const ProfileForm = ({ action, initialForm, onClose }: ProfileFormProps) => {
           Update
         </Button>
         {onClose && (
-          <Button title="Close" warning onClick={onClose}>
+          <Button title="Close" error onClick={onClose}>
             Close
           </Button>
         )}
